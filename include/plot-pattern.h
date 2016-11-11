@@ -54,11 +54,11 @@ class PlotPattern {
   }
 
   double getTimeBegin() const {
-    return std::get<1>(this->_data.begin());
+    return std::get<1>(this->_data.front());
   }
 
   double getTimeEnd() const {
-    return std::get<1>(this->_data.end());
+    return std::get<1>(this->_data.back());
   }
 
   bool operator<(const PlotPattern<DURATION>& rhs) const {
@@ -154,6 +154,16 @@ class PlotPattern {
     return *this;
   }
 
+  static void getPatternIndexFromMetricName(vector<PlotPattern<DURATION>>& patterns,
+                                     string metricName,
+                                     size_t& patternIndex) {
+    for (; patternIndex < patterns.size(); patternIndex++) {
+      if (patterns[patternIndex].getMetricName() == metricName) {
+        break;
+      }
+    }
+  }
+
  protected:
   DATA _data;
   float _equalityEpsilon;
@@ -171,3 +181,5 @@ std::ostream& operator <<(std::ostream& stream, const PlotPattern<DURATION>& pp)
   stream << " } }";
   return stream;
 }
+
+using PlotPatternSpecialized = PlotPattern<ANALYTIC_ENGINE::PATTERN_SIZE>;

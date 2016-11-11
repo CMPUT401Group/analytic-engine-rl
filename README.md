@@ -12,6 +12,12 @@ thousands of metrics.
 > method or the _RL Engine_ used can actually do multi-level entailment. But since
 > this project is still in its incipient stage, we stick with one level.
 
+# Reinforcement Learning and Metric Analysis
+This just seems like a perfect combination. The basic concept is **P -> g**'s is given
+a positive reinforcement when it occurs, but negative reinforcement if **P -> (not g)**
+occurs. We take _n_ random samples around the metrics (known as training). As _n_ increase, the better
+AI's prediction model is, much like a human observer.
+
 # Compilation and Installation
 
 ### Dependency:
@@ -57,7 +63,7 @@ While still in the build directory:
 
 Parameters:
 * **test/data/test-metrics.json**: This is simply a list of metrics. The format is:
-```json
+```js
 [
   {"target": "metricName", datapoints: [ [y, x], ...]},
   ...
@@ -67,19 +73,22 @@ Parameters:
 reinforcement learning parameters that should be good enough.
 ```js
 {
-  // The metric in our goal pattern. This metric should be in the first cli argument.
-  "goalMetric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+  // The goal pattern to which our AI will try to find entailing patterns from
+  // other metric.
+  "goalPattern": {
+    // Name of the metric in which our pattern is located.
+    "metric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    
+    // The begin time of our goal pattern (unix time stamp) in the metric.
+    "timeBegin": 1474111311,
+    
+    // The end time of our goal pattern (unix time stamp) in the metric.  
+    "timeEnd": 1474111440
+  },
   
-  // The begin time of our goal pattern (unix time stamp).
-  "goalPatternTimeBegin": 1474111311,
-  
-  // The end time of our goal pattern (unix time stamp).
-  "goalPatternTimeEnd": 1474111440,
-  
-  // As we train our ai model, this is the increment in time in which we scan our metrics.
-  // The smaller, the more accurate the results, but the slower. You can ramp this up to 
-  // 40 just to get some results, though those won't be accurate.
-  "scanStepSize": 2,
+  // The number of times our AI sample the metrics. The higher the more accurate the
+  // model, but slower.
+  "iterationCount": 50,
   
   // This the initial reward for all new states. Since all reward are negative
   // in this environment, you can afford to go as low as you want.
@@ -109,48 +118,62 @@ output:
 [
 // First few outputs.
 // ...
-  [
-    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    "invidi.webapp.localhost_localdomain.request.total_response_time.percentile.95",
-    -1000000
-  ],
-  [
-    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    "invidi.webapp.localhost_localdomain.request.total_response_time.percentile.98",
-    -1000000
-  ],
+  {
+      "destPattern": {
+        "metric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+        "timeBegin": 1474111311,
+        "timeEnd": 1474111311
+      },
+      "reward": -1000000,
+      "sourcePattern": {
+        "metric": "invidi.webapp.localhost_localdomain.database.request.findEtl.success_gauge",
+        "timeBegin": 1474111311,
+        "timeEnd": 1474111311
+      }
+  },
 // The last few outputs.
 // (Note: this is ran with scanStepSize=40, so results are inaccurate but should suffice).
-  [
-    "invidi.webapp.localhost_localdomain.database.request.findDevice.start_gauge",
-    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    -965610.023177183
-  ],
-  [
-    "invidi.webapp.localhost_localdomain.database.request.findAdsToKeep.success_gauge",
-    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    -965610.023177183
-  ],
-  [
-    "invidi.webapp.localhost_localdomain.database.request.findAdsToKeep.start_gauge",
-    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    -965610.023177183
-  ],
-  [
-    "invidi.webapp.localhost_localdomain.cache.DEVICE_ID.count",
-    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    -965610.023177183
-  ]
+  {
+    "destPattern": {
+      "metric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+      "timeBegin": 1474111311,
+      "timeEnd": 1474111311
+    },
+    "reward": -979290.007555472,
+    "sourcePattern": {
+      "metric": "invidi.webapp.localhost_localdomain.database.request.findAdsToKeep.start_gauge",
+      "timeBegin": 1474111311,
+      "timeEnd": 1474111311
+    }
+  },
+  {
+    "destPattern": {
+      "metric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+      "timeBegin": 1474111311,
+      "timeEnd": 1474111311
+    },
+    "reward": -979290.007555472,
+    "sourcePattern": {
+      "metric": "invidi.webapp.localhost_localdomain.cache.DEVICE_ID.count",
+      "timeBegin": 1474111311,
+      "timeEnd": 1474111311
+    }
+  }
 ]
 ```
 
-The output is a massive array. Each array entry contains _entailing pattern_,
-_entailed pattern_, and _reward_. As expected, our goal pattern _invidi.webapp.localhost_localdomain.request.total_response_time.mean_
-made up the _entailed patterns_ in the last few outputs with the greatest reward. In this
-AI model, _invidi.webapp.localhost_localdomain.cache.DEVICE_ID.count_ is the greatest suspect
-that entails our goal pattern (again, we are running with _scanStepSize=40_ so this is very inaccurate).
+* **sourcePattern**: The entailing pattern.
+  * **metric:** The metric in which this pattern is located.
+  * **timeBegin:** The beginning time where this pattern is located in the metric.
+  * **timeEnd:** The end time where this pattern is located in the metric.
+* **destPattern:**  The entailed pattern.
+  * **metric:** The metric in which this pattern is located.
+  * **timeBegin:** The beginning time where this pattern is located in the metric.
+  * **timeEnd:** The end time where this pattern is located in the metric.
+* **reward:** The value of transitioning from **sourcePattern** to **destPattern**. Due
+to the nature of this problem this values range from _-infinity_ to 0.
 
-**Note:**
-> that a pattern should also contain a _timeBegin_ and _timeEnd_, but since
-> we are still in incipient stage, all patterns will be the same as config.json's
-> "goalPatternTimeBegin" and "goalPatternTimeEnd".
+Since we are still in the incipient stage of this project, **timeBegin**/**timeEnd** for
+both **sourcePattern** and **destPattern** is the same. This appears to be giving
+useful results, but there is nothing stopping us from having those having some offsets
+other than it would slow the development due to more things to test.

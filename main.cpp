@@ -6,6 +6,8 @@
 #include <string>
 #include <exception>
 #include <set>
+#include <random>
+#include <ctime>
 
 #include <rl>
 
@@ -15,10 +17,6 @@ const string appName = "analytic-engine-cli";
 
 using namespace std;
 using json = nlohmann::json;
-
-const size_t PATTERN_SIZE = 15;
-using STATE = PlotPatternState<PATTERN_SIZE>;
-using ACTION = PlotPatternState<PATTERN_SIZE>;
 
 int main(int argc, char** argv) {
   if (argc < 3) {
@@ -47,10 +45,10 @@ int main(int argc, char** argv) {
   std::string configFileString((std::istreambuf_iterator<char>(configFileStream)), std::istreambuf_iterator<char>());
   auto configJSON = json::parse(configFileString);
 
-  string goalMetric = configJSON["goalMetric"];
-  size_t patternTimeBegin = configJSON["goalPatternTimeBegin"];
-  size_t patternTimeEnd = configJSON["goalPatternTimeEnd"];
-  size_t scanStepSize = configJSON["scanStepSize"];
+  string goalMetric = configJSON["goalPattern"]["metric"];
+  size_t patternTimeBegin = configJSON["goalPattern"]["timeBegin"];
+  size_t patternTimeEnd = configJSON["goalPattern"]["timeEnd"];
+  size_t iterationCount = configJSON["iterationCount"];
   float initialReward = configJSON["initialReward"];
   float stepSize = configJSON["reinforcementLearning"]["stepSize"];
   float discountRate = configJSON["reinforcementLearning"]["discountRate"];
@@ -63,7 +61,7 @@ int main(int argc, char** argv) {
   std::cout << "Min metric time: " << minMaxMetricTime.first << std::endl;
   std::cout << "Max metric time: " << minMaxMetricTime.second << std::endl;
   std::cout << "Metric time duration (max metric time - min metric time): "
-            << (minMaxMetricTime.first - minMaxMetricTime.second) / 60.0F
+            << (minMaxMetricTime.second - minMaxMetricTime.first) / 60.0F
             << "min"
             << std::endl;
 
@@ -73,7 +71,7 @@ int main(int argc, char** argv) {
   std::cout << "Max pattern time: " << patternTimeEnd << std::endl;
   std::cout << "Pattern duration (Max pattern time - Min pattern time): " << patternDuration << std::endl;
 
-  vector<PlotPattern<PATTERN_SIZE>> patterns = Metric::getPatternsFromMetrics<PATTERN_SIZE>(
+  vector<PlotPatternSpecialized> patterns = Metric::getPatternsFromMetrics<ANALYTIC_ENGINE::PATTERN_SIZE>(
       metrics,
       patternTimeBegin,
       patternTimeEnd);
@@ -84,24 +82,19 @@ int main(int argc, char** argv) {
   vector<STATE> patternStates = STATE::getPlotPatternStatesFromPatterns(patterns);
 
   size_t goalPatternIndex = 0;
-  for (; goalPatternIndex < patterns.size(); goalPatternIndex++) {
-    if (patterns[goalPatternIndex].getMetricName() == goalMetric) {
-      std::cout << "Goal state located" << std::endl;
-      break;
-    }
-  }
+  PlotPatternSpecialized::getPatternIndexFromMetricName(patterns, goalMetric, goalPatternIndex);
 
   if (goalPatternIndex == patterns.size()) {
     std::cerr << "Goal Pattern was not found in the given metrics." << std::endl;
     return 1;
   }
 
-  PlotPattern<PATTERN_SIZE> goalPattern = patterns[goalPatternIndex];
+  PlotPatternSpecialized goalPattern = patterns[goalPatternIndex];
   STATE goalState(goalPattern);
 
-  AnalyticEngineEnvironment<STATE, ACTION> aee;
+  AnalyticEngineEnvironmentSpecialized aee;
 
-  AI::ActuatorBase<STATE, ACTION> actuator(aee);
+  ActuatorBaseSpecialized actuator(aee);
   for (auto p : patternStates) { actuator.addAction(p); }
 
   AI::Algorithm::Policy::EpsilonGreedy<STATE, ACTION> policy(1.0F);
@@ -110,41 +103,39 @@ int main(int argc, char** argv) {
 
   AI::AgentSupervised<STATE, ACTION> agent(actuator, sarsaAlgorithm);
 
-  size_t iterationCount = 0;
-  size_t maximumIterationCount = ((minMaxMetricTime.second - minMaxMetricTime.first)/scanStepSize) * patternStates.size();
+  size_t maximumIterationCount = iterationCount * patternStates.size();
   size_t updateIteration = maximumIterationCount * 0.01;  // Update every 1%.
-  for (size_t time = minMaxMetricTime.first; time < minMaxMetricTime.second - patternDuration; time+=scanStepSize) {
-    ANALYTIC_ENGINE::time patternTimeBegin = time;
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(minMaxMetricTime.first, minMaxMetricTime.second - patternDuration);
+
+  for (size_t i = 0; i < iterationCount; i++) {
+    ANALYTIC_ENGINE::time patternTimeBegin = dis(gen);
     ANALYTIC_ENGINE::time patternTimeEnd = patternTimeBegin + patternDuration;
 
     auto goalMetric = goalPattern.getMetric();
-    auto currentGoalPattern = goalMetric.getPattern<PATTERN_SIZE>(patternTimeBegin, patternTimeEnd);
+    auto currentGoalPattern = goalMetric.getPattern<ANALYTIC_ENGINE::PATTERN_SIZE>(patternTimeBegin, patternTimeEnd);
 
     for (auto patternState : patternStates) {
       auto pattern = patternState.getValue();
       auto metric = pattern.getMetric();
 
-      try {
-        auto currentPattern = metric.getPattern<PATTERN_SIZE>(patternTimeBegin, patternTimeEnd);
-        if (pattern == currentPattern) {
-          agent.train(
-              patternState,
-              goalState,
-              -goalPattern.getAbsoluteArea(currentGoalPattern),  // Reward.
-              goalState
-          );
-        }
-      } catch(...) {
-        //std::cerr << "time out of range in current metric" << std::endl;
-      }
-
-      if ((iterationCount++ % updateIteration) == 0) {
-        std::cout << "Traning: "
-                  << std::ceil(100 * static_cast<float>(iterationCount)/maximumIterationCount)
-                  << "%"
-                  << std::endl;
+      auto currentPattern = metric.getPattern<ANALYTIC_ENGINE::PATTERN_SIZE>(patternTimeBegin, patternTimeEnd);
+      if (pattern == currentPattern) {
+        agent.train(
+            patternState,
+            goalState,
+            -goalPattern.getAbsoluteArea(currentGoalPattern),  // Reward.
+            goalState
+        );
       }
     }
+
+    std::cout << "Traning: "
+              << std::ceil((i * patternStates.size()) / updateIteration)
+              << "%"
+              << std::endl;
   }
 
   std::cout << "Iteration count: " << iterationCount << std::endl;
@@ -155,10 +146,33 @@ int main(int argc, char** argv) {
   json resultJSON;
   set<string> metricNameSet;
   for (auto rewardStatePair : rewardMultimap) {
-    string metricName = rewardStatePair.second.getState().getValue().getMetricName();
-    string entailedMetricName = rewardStatePair.second.getAction().getValue().getMetricName();
+    auto pattern = rewardStatePair.second.getState().getValue();
+    auto entailedPattern = rewardStatePair.second.getAction().getValue();
+
+    string metricName = pattern.getMetricName();
+    string entailedMetricName = entailedPattern.getMetricName();
     double reward = rewardStatePair.first;
-    resultJSON.push_back({ metricName, entailedMetricName, reward });
+
+    json entry = {
+        {
+            "sourcePattern" ,
+            {
+                { "metric", metricName },
+                { "timeBegin", static_cast<size_t>(pattern.getTimeBegin()) },
+                { "timeEnd", static_cast<size_t>(pattern.getTimeBegin()) }
+            }
+        },
+        {
+            "destPattern",
+            {
+                { "metric", entailedMetricName },
+                { "timeBegin", static_cast<size_t>(pattern.getTimeBegin()) },
+                { "timeEnd", static_cast<size_t>(pattern.getTimeBegin()) }
+            }
+        },
+        { "reward", reward },
+    };
+    resultJSON.push_back(entry);
     metricNameSet.insert(metricName);
     //std::cout << "Metric: " << metricName << ", reward: " << reward << std::endl;
   }

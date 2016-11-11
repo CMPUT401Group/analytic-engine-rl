@@ -37,3 +37,6 @@ class AnalyticEngineEnvironment : public AI::Environment<STATE, ACTION> {
  private:
   STATE* _pCurrentState = nullptr;
 };
+
+using AnalyticEngineEnvironmentSpecialized =
+AnalyticEngineEnvironment<PlotPatternState<15>, PlotPatternState<15>>;
