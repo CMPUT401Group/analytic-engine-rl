@@ -35,9 +35,3 @@ build/
 
 # IDE crap.
 .idea/
-.gitignore
-CMakeLists.txt
-include/
-main.cpp
-src/
-test/
