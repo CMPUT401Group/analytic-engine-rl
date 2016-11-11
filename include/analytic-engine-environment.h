@@ -5,24 +5,17 @@
 #pragma once
 
 #include <map>
-
-#include <rl/GlobalHeader.h>  // types.
-#include <rl/StateAction.h>
-#include <rl/Environment.h>
+#include <rl>
 
 #include "declares.h"
 #include "plot-pattern-state.h"
 
 using std::map;
 
-template<size_t PATTERN_DURATION, size_t METRIC_DURATION>
-class AnalyticEngineEnvironment : public AI::Environment<PlotPatternState<PATTERN_DURATION>, PlotPatternState<PATTERN_DURATION>> {
-  using STATE = PlotPatternState<PATTERN_DURATION>;
-  using ACTION = STATE;
+template<class STATE, class ACTION>
+class AnalyticEngineEnvironment : public AI::Environment<STATE, ACTION> {
  public:
-  AnalyticEngineEnvironment(const map<string,  array<ANALYTIC_ENGINE::point, METRIC_DURATION>>& metrics) {
-
-  }
+  AnalyticEngineEnvironment() {}
 
   // Overloaded methods.
   virtual const STATE& getLastObservedState() const {

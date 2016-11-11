@@ -1,0 +1,3 @@
+function(GenerateMainHeader INCLUDE_DIR OUTPUT_FILE SUB_HEADER_PREFIX)
+    execute_process(COMMAND bash ${CMAKE_SOURCE_DIR}/CMakefiles/generate-main-header.sh "${INCLUDE_DIR}" "${OUTPUT_FILE}" "${SUB_HEADER_PREFIX}")
+endfunction()

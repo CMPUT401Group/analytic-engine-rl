@@ -1,8 +1,8 @@
 #pragma once
 
-#include <rl/SensorDiscrete.h>
+#include <rl>
 
-#include "plot-pattern.h"
+#include "plot-pattern-state.h"
 
 template<size_t PATTERN_DURATION>
 class AnalyticEngineSensor :

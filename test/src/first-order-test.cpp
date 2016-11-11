@@ -2,10 +2,7 @@
 #include <string>
 #include <array>
 
-#include <rl/ActuatorBase.h>
-#include <rl/Agent.h>
-#include <rl/EpsilonGreedy.h>
-#include <rl/Sarsa.h>
+#include <rl>
 
 #include "catch.hpp"
 #include "analytic-engine-rl.h"
@@ -69,7 +66,7 @@ using ACTION = PlotPatternState<2>;
 
 SCENARIO("First order complexity test. Give a set of pattern P that entails a goal pattern g.") {
   GIVEN("A analytic-engine-environment is created.") {
-    AnalyticEngineEnvironment<2, 10> aee(TEST_METRICS);
+    AnalyticEngineEnvironment<STATE, ACTION> aee;
 
     AI::ActuatorBase<STATE, ACTION> actuator(aee);
     for (auto p : t00) { actuator.addAction(p); }

@@ -9,6 +9,9 @@
 #include <cassert>
 #include <cmath>
 #include <string>
+#include <functional>
+#include <numeric>
+#include <iostream>
 
 #include "declares.h"
 
@@ -16,49 +19,69 @@ using std::vector;
 using std::array;
 using std::string;
 
+class Metric;
+
 template <size_t DURATION>
 class PlotPattern {
  public:
-  using DATA = array<ANALYTIC_ENGINE::point, DURATION>;
-  PlotPattern(string metricName, const DATA& data, float equalityEpsilon = 0.001f) :
-      _metricName(metricName),
+  using DATA = array<std::pair<double, double>, DURATION>;
+  PlotPattern(Metric& metric, const DATA& data, float equalityEpsilon = 0.02f) :
+      _metric(metric),
       _data(data),
-      _equalityEpsilon(equalityEpsilon) {}
+      _equalityEpsilon(equalityEpsilon) {
+    this->_min = std::accumulate(
+        data.begin(),
+        data.end(),
+        data.front().first,
+        [](float currentMin, const ANALYTIC_ENGINE::point& p) {
+          if (currentMin > p.first) { return p.first; }
+          return currentMin;
+        });
 
-  ANALYTIC_ENGINE::time getDuration() const {
+    this->_max = std::accumulate(
+        data.begin(),
+        data.end(),
+        data.front().first,
+        [](float currentMax, const ANALYTIC_ENGINE::point& p) {
+          if (currentMax < p.first) { return p.first; }
+          return currentMax;
+        });
+  }
+
+  double getDuration() const {
     return DURATION;
   }
 
-  ANALYTIC_ENGINE::time getTimeBegin() const {
+  double getTimeBegin() const {
     return std::get<1>(this->_data.begin());
   }
 
-  ANALYTIC_ENGINE::time getTimeEnd() const {
+  double getTimeEnd() const {
     return std::get<1>(this->_data.end());
   }
 
   bool operator<(const PlotPattern<DURATION>& rhs) const {
     return *this != rhs &&
-        (this->_metricName < rhs._metricName ||
-            (this->_metricName == rhs._metricName && this->getArea(rhs) < 0));
+        (this->_metric < rhs._metric ||
+            (this->_metric == rhs._metric && this->getArea(rhs) < 0));
   }
 
   bool operator>(const PlotPattern<DURATION>& rhs) const {
     return *this != rhs &&
-        (this->_metricName > rhs._metricName ||
-            (this->_metricName == rhs._metricName && this->getArea(rhs) > 0));
+        (this->_metric > rhs._metric ||
+            (this->_metric == rhs._metric && this->getArea(rhs) > 0));
   }
 
   bool operator<=(const PlotPattern<DURATION>& rhs) const {
     return *this == rhs &&
-        (this->_metricName <= rhs._metricName ||
-            (this->_metricName == rhs._metricName && this->getArea(rhs) < 0));
+        (this->_metric <= rhs._metric ||
+            (this->_metric == rhs._metric && this->getArea(rhs) < 0));
   }
 
   bool operator>=(const PlotPattern<DURATION>& rhs) const {
     return *this == rhs &&
-        (this->_metricName >= rhs._metricName ||
-            (this->_metricName == rhs._metricName && this->getArea(rhs) > 0));
+        (this->_metric >= rhs._metric ||
+            (this->_metric == rhs._metric && this->getArea(rhs) > 0));
   }
 
   bool operator==(const PlotPattern<DURATION>& rhs) const {
@@ -66,7 +89,7 @@ class PlotPattern {
       return true;
     }
 
-    return this->_metricName == rhs._metricName &&
+    return this->_metric == rhs._metric &&
         this->getAbsoluteArea(rhs) < this->_equalityEpsilon;
   }
 
@@ -78,20 +101,25 @@ class PlotPattern {
     float area = 0.0;
 
     for (size_t i = 0; i < DURATION; i++) {
-      area += std::abs(std::get<0>(rhs._data.at(i)) - std::get<0>(this->_data.at(i)));
+      area += std::abs(this->getNormalizeY(i) - rhs.getNormalizeY(i));
     }
 
-    return area;
+    return area/DURATION;
   }
 
   float getArea(const PlotPattern<DURATION>& rhs) const {
     float area = 0.0;
 
     for (size_t i = 0; i < DURATION; i++) {
-      area += std::get<0>(rhs._data.at(i)) - std::get<0>(this->_data.at(i));
+      area += (this->getNormalizeY(i) - rhs.getNormalizeY(i));
     }
 
-    return area;
+    return area/DURATION;
+  }
+
+  float getNormalizeY(size_t index) const {
+    float magnitude = this->_max - this->_min;
+    return (std::get<0>(this->_data.at(index)) - this->_min) / magnitude;
   }
 
   DATA& getData() {
@@ -102,8 +130,16 @@ class PlotPattern {
     return this->_data;
   }
 
+  Metric& getMetric() {
+    return this->_metric;
+  }
+
+  const Metric& getMetric() const {
+    return this->_metric;
+  }
+
   string getMetricName() const {
-    return this->_metricName;
+    return this->_metric.getMetricName();
   }
 
   virtual PlotPattern<DURATION>& operator=(PlotPattern<DURATION>& rhs) {
@@ -113,14 +149,16 @@ class PlotPattern {
 
     this->_data = rhs._data;
     this->_equalityEpsilon = rhs._equalityEpsilon;
-    this->_metricName = rhs._metricName;
+    this->_metric = rhs._metric;
     return *this;
   }
 
  protected:
-  DATA _data = nullptr;
+  DATA _data;
   float _equalityEpsilon;
-  string _metricName;
+  Metric& _metric;
+
+  float _min, _max;
 };
 
 template <size_t DURATION>
