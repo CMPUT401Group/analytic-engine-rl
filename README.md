@@ -40,10 +40,12 @@ make install
 ### Building
 Once the dependencies are installed, you can start building:
 
-1. `mkdir build`
-2. `cd build`
-3. `cmake ..`
-4. `make -j16`
+1. `git clone https://github.com/CMPUT401Group/analytic-engine-rl.git`
+2. cd analytic-engine-rl
+3. `mkdir build`
+4. `cd build`
+5. `cmake ..`
+6. `make -j16`
 
 # Usage
 While still in the build directory:
