@@ -8,6 +8,7 @@
 #include <rl>
 #include <vector>
 
+#include "declares.h"
 #include "plot-pattern.h"
 
 using namespace std;
@@ -33,3 +34,6 @@ std::ostream& operator <<(std::ostream& stream, const PlotPatternState<DURATION>
   stream << pps.getValue();
   return stream;
 }
+
+using STATE = PlotPatternState<ANALYTIC_ENGINE::PATTERN_SIZE>;
+using ACTION = STATE;
