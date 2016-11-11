@@ -60,9 +60,9 @@ Parameters:
   ...
 ]
 ```
-* **test/data/config.json**: Tells the cli program what is the goal pattern and some
+* **test/data/config.js**: Tells the cli program what is the goal pattern and some
 reinforcement learning parameters that should be good enough.
-```json
+```js
 {
   // The metric in our goal pattern. This metric should be in the first cli argument.
   "goalMetric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
@@ -98,3 +98,56 @@ reinforcement learning parameters that should be good enough.
   "resultFile": "result.json"
 }
 ```
+### Interpreting the result
+In the result.json after running the the cli program with the test parameters should
+output: 
+
+```js
+[
+// First few outputs.
+// ...
+  [
+    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    "invidi.webapp.localhost_localdomain.request.total_response_time.percentile.95",
+    -1000000
+  ],
+  [
+    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    "invidi.webapp.localhost_localdomain.request.total_response_time.percentile.98",
+    -1000000
+  ],
+// The last few outputs.
+// (Note: this is ran with scanStepSize=40, so results are inaccurate but should suffice).
+  [
+    "invidi.webapp.localhost_localdomain.database.request.findDevice.start_gauge",
+    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    -965610.023177183
+  ],
+  [
+    "invidi.webapp.localhost_localdomain.database.request.findAdsToKeep.success_gauge",
+    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    -965610.023177183
+  ],
+  [
+    "invidi.webapp.localhost_localdomain.database.request.findAdsToKeep.start_gauge",
+    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    -965610.023177183
+  ],
+  [
+    "invidi.webapp.localhost_localdomain.cache.DEVICE_ID.count",
+    "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
+    -965610.023177183
+  ]
+]
+```
+
+The output is a massive array. Each array entry contains _entailing pattern_,
+_entailed pattern_, and _reward_. As expected, our goal pattern _invidi.webapp.localhost_localdomain.request.total_response_time.mean_
+made up the _entailed patterns_ in the last few outputs with the greatest reward. In this
+AI model, _invidi.webapp.localhost_localdomain.cache.DEVICE_ID.count_ is the greatest suspect
+that entails our goal pattern (again, we are running with _scanStepSize=40_ so this is very inaccurate).
+
+**Note:**
+> that a pattern should also contain a _timeBegin_ and _timeEnd_, but since
+> we are still in incipient stage, all patterns will be the same as config.json's
+> "goalPatternTimeBegin" and "goalPatternTimeEnd".

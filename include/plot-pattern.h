@@ -25,7 +25,8 @@ template <size_t DURATION>
 class PlotPattern {
  public:
   using DATA = array<std::pair<double, double>, DURATION>;
-  PlotPattern(Metric& metric, const DATA& data, float equalityEpsilon = 0.02f) :
+  // todo: make equalityEpsilon a cli param.
+  PlotPattern(Metric& metric, const DATA& data, float equalityEpsilon = 0.04f) :
       _metric(metric),
       _data(data),
       _equalityEpsilon(equalityEpsilon) {

@@ -5,6 +5,7 @@
 #include <streambuf>
 #include <string>
 #include <exception>
+#include <set>
 
 #include <rl>
 
@@ -150,14 +151,19 @@ int main(int argc, char** argv) {
 
   auto rewardMultimap = sarsaAlgorithm.getStateActionPairContainer().getReverseMap();
 
-  std::cout << std::endl << "Results (Organized from most entailment to least entailment): " << std::endl;
+  //std::cout << std::endl << "Results (Organized from most entailment to least entailment): " << std::endl;
   json resultJSON;
+  set<string> metricNameSet;
   for (auto rewardStatePair : rewardMultimap) {
     string metricName = rewardStatePair.second.getState().getValue().getMetricName();
+    string entailedMetricName = rewardStatePair.second.getAction().getValue().getMetricName();
     double reward = rewardStatePair.first;
-    resultJSON.push_back({ metricName, reward });
-    std::cout << "Metric: " << metricName << ", reward: " << reward << std::endl;
+    resultJSON.push_back({ metricName, entailedMetricName, reward });
+    metricNameSet.insert(metricName);
+    //std::cout << "Metric: " << metricName << ", reward: " << reward << std::endl;
   }
+
+  std::cout << "Trained metric count: " << metricNameSet.size() << std::endl;
 
   std::ofstream resultFileStream;
   resultFileStream.open(resultFile);
