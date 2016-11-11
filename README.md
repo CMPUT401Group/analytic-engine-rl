@@ -15,8 +15,10 @@ thousands of metrics.
 # Reinforcement Learning and Metric Analysis
 This just seems like a perfect combination. The basic concept is **P -> g**'s is given
 a positive reinforcement when it occurs, but negative reinforcement if **P -> (not g)**
-occurs. We take _n_ random samples around the metrics (known as training). As _n_ increase, the better
-AI's prediction model is, much like a human observer.
+occurs. The latter eliminates false positives, for instance if **p->q** and not **q->p**, 
+**q->p** (false positive) will be eliminated. We take _n_ random samples around the metrics (known as training). 
+As _n_ increase and the bigger our metric time span, the better AI's prediction model is 
+(less false positives and such), much like a human observer. 
 
 # Compilation and Installation
 
@@ -177,3 +179,19 @@ Since we are still in the incipient stage of this project, **timeBegin**/**timeE
 both **sourcePattern** and **destPattern** is the same. This appears to be giving
 useful results, but there is nothing stopping us from having those having some offsets
 other than it would slow the development due to more things to test.
+
+# TODOs
+* Not restrict to one level of entailment.
+* Not restrict source/destination Pattern to single timeBegin/timeEnd.
+* At the moment, we only use SARSA algorithm. There are actually better algorithms that allows 
+for faster convergence, but we are still exploring so I'll stick with the simplest.
+**Allow to specify algorithm in config.json.**
+* [Reinforcment Learning Module](https://github.com/JoeyAndres/rl)
+  * Allow multi-threading. Atm, I have only explored cpu intrinsics (SSE/SSE2/AVX and such),
+  but we could really benefit from multi-threading.
+  * Atm, the AI model is stored in RAM. We should be able to store results in JSON file, or
+  even better, utilized MongoDB (will help with many node js development).
+* Visualization. Imagine multi-level entailment and visualization. That would be REALLY
+sweet. That is why I mentioned storing MongoDB as one of TODO, since with MeteorJS for
+node development, we could have our visualization updated automatically in real-time as
+our model changes in the backend.
