@@ -38,7 +38,8 @@ make install
 ```
 
 ### Building
-Once the dependency are installed, you can start building:
+Once the dependencies are installed, you can start building:
+
 1. `mkdir build`
 2. `cd build`
 3. `cmake ..`
