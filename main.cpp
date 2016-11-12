@@ -92,16 +92,12 @@ int main(int argc, char** argv) {
   PlotPatternSpecialized goalPattern = patterns[goalPatternIndex];
   STATE goalState(goalPattern);
 
-  AnalyticEngineEnvironmentSpecialized aee;
-
-  ActuatorBaseSpecialized actuator(aee);
-  for (auto p : patternStates) { actuator.addAction(p); }
-
+  std::set<ACTION> actions(patternStates.begin(), patternStates.end());
+  auto actionSet = AI::ActionSet<ACTION>(actions);
   AI::Algorithm::Policy::EpsilonGreedy<STATE, ACTION> policy(1.0F);
   AI::Algorithm::RL::Sarsa<STATE, ACTION> sarsaAlgorithm(stepSize, discountRate, policy);
   sarsaAlgorithm.setDefaultStateActionValue(initialReward);
-
-  AI::AgentSupervised<STATE, ACTION> agent(actuator, sarsaAlgorithm);
+  AI::AgentSupervised<STATE, ACTION> agent(actionSet, sarsaAlgorithm);
 
   size_t maximumIterationCount = iterationCount * patternStates.size();
   size_t updateIteration = maximumIterationCount * 0.01;  // Update every 1%.
