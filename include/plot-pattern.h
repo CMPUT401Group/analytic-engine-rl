@@ -12,8 +12,11 @@
 #include <functional>
 #include <numeric>
 #include <iostream>
+#include <rl>
+#include <memory>
 
 #include "declares.h"
+#include "spline.h"
 
 using std::vector;
 using std::array;
@@ -25,8 +28,11 @@ template <size_t DURATION>
 class PlotPattern {
  public:
   using DATA = array<std::pair<double, double>, DURATION>;
+
   // todo: make equalityEpsilon a cli param.
-  PlotPattern(Metric& metric, const DATA& data, float equalityEpsilon = 0.04f) :
+  PlotPattern(const std::shared_ptr<Metric>& metric,
+              const DATA& data,
+              float equalityEpsilon = 0.08f) :
       _metric(metric),
       _data(data),
       _equalityEpsilon(equalityEpsilon) {
@@ -62,27 +68,37 @@ class PlotPattern {
   }
 
   bool operator<(const PlotPattern<DURATION>& rhs) const {
-    return *this != rhs &&
-        (this->_metric < rhs._metric ||
-            (this->_metric == rhs._metric && this->getArea(rhs) < 0));
+    if (*(this->_metric) < *(rhs._metric)) {
+      return true;
+    }
+    if (*(this->_metric) > *(rhs._metric)) {
+      return false;
+    }
+    if (this->getID() < rhs.getID()) {
+      return true;
+    }
+    return false;
   }
 
   bool operator>(const PlotPattern<DURATION>& rhs) const {
-    return *this != rhs &&
-        (this->_metric > rhs._metric ||
-            (this->_metric == rhs._metric && this->getArea(rhs) > 0));
+    if (*(this->_metric) > *(rhs._metric)) {
+      return true;
+    }
+    if (*(this->_metric) < *(rhs._metric)) {
+      return false;
+    }
+    if (this->getID() > rhs.getID()) {
+      return true;
+    }
+    return false;
   }
 
   bool operator<=(const PlotPattern<DURATION>& rhs) const {
-    return *this == rhs &&
-        (this->_metric <= rhs._metric ||
-            (this->_metric == rhs._metric && this->getArea(rhs) < 0));
+    return !(*this > rhs);
   }
 
   bool operator>=(const PlotPattern<DURATION>& rhs) const {
-    return *this == rhs &&
-        (this->_metric >= rhs._metric ||
-            (this->_metric == rhs._metric && this->getArea(rhs) > 0));
+    return !(*this < rhs);
   }
 
   bool operator==(const PlotPattern<DURATION>& rhs) const {
@@ -90,7 +106,7 @@ class PlotPattern {
       return true;
     }
 
-    return this->_metric == rhs._metric &&
+    return *this->_metric == *rhs._metric &&
         this->getAbsoluteArea(rhs) < this->_equalityEpsilon;
   }
 
@@ -131,16 +147,26 @@ class PlotPattern {
     return this->_data;
   }
 
-  Metric& getMetric() {
+  std::shared_ptr<Metric>& getMetric() {
     return this->_metric;
   }
 
-  const Metric& getMetric() const {
+  const std::shared_ptr<Metric>& getMetric() const {
     return this->_metric;
   }
 
   string getMetricName() const {
-    return this->_metric.getMetricName();
+    return this->_metric->getMetricName();
+  }
+
+  size_t getID() const {
+    size_t id = 0;
+    auto base = DURATION * 10;
+    for (size_t i = 0; i < DURATION; i++) {
+      id += std::ceil(this->getNormalizeY(i) * 5) * base * i;
+    }
+
+    return id;
   }
 
   virtual PlotPattern<DURATION>& operator=(PlotPattern<DURATION>& rhs) {
@@ -154,11 +180,11 @@ class PlotPattern {
     return *this;
   }
 
-  static void getPatternIndexFromMetricName(vector<PlotPattern<DURATION>>& patterns,
+  static void getPatternIndexFromMetricName(vector<rl::spState<PlotPattern<DURATION>>>& patterns,
                                      string metricName,
                                      size_t& patternIndex) {
     for (; patternIndex < patterns.size(); patternIndex++) {
-      if (patterns[patternIndex].getMetricName() == metricName) {
+      if (patterns[patternIndex]->getMetricName() == metricName) {
         break;
       }
     }
@@ -167,7 +193,7 @@ class PlotPattern {
  protected:
   DATA _data;
   float _equalityEpsilon;
-  Metric& _metric;
+  std::shared_ptr<Metric> _metric;
 
   float _min, _max;
 };

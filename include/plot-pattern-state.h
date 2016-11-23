@@ -14,13 +14,14 @@
 using namespace std;
 
 template <size_t DURATION>
-class PlotPatternState : public AI::StateInterface<PlotPattern<DURATION>> {
+class PlotPatternState : public rl::StateInterface<PlotPattern<DURATION>> {
  public:
-  PlotPatternState(const PlotPattern<DURATION>& value) : AI::StateInterface<PlotPattern<DURATION>>(value) {}
+  // TODO: Remove getValue thing. Simply have a state interface and let it be that.
+  PlotPatternState(const rl::spState<PlotPattern<DURATION>>& value) : rl::StateInterface<PlotPattern<DURATION>>(value) {}
 
   static vector<PlotPatternState<DURATION>> getPlotPatternStatesFromPatterns(
-      const vector<PlotPattern<DURATION>>& patterns) {
-    vector<PlotPatternState<DURATION>> patternStates;
+      const vector<rl::spState<PlotPattern<DURATION>>>& patterns) {
+    vector<rl::spState<PlotPatternState<DURATION>>> patternStates;
     for (auto pattern : patterns) {
       patternStates.push_back(PlotPatternState<DURATION>(pattern));
     }
@@ -31,9 +32,9 @@ class PlotPatternState : public AI::StateInterface<PlotPattern<DURATION>> {
 
 template <size_t DURATION>
 std::ostream& operator <<(std::ostream& stream, const PlotPatternState<DURATION>& pps) {
-  stream << pps.getValue();
+  stream << *(pps.getValue());
   return stream;
 }
 
-using STATE = PlotPatternState<ANALYTIC_ENGINE::PATTERN_SIZE>;
+using STATE = PlotPattern<ANALYTIC_ENGINE::PATTERN_SIZE>;
 using ACTION = STATE;

@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cmath>
 #include <string>
+#include <memory>
 
 #include "json.hpp"
 
@@ -136,11 +137,13 @@ class Metric {
   }
 
   template <size_t DURATION>
-  PlotPattern<DURATION> getPattern(ANALYTIC_ENGINE::time tBegin, ANALYTIC_ENGINE::time tEnd) {
-    assert(tEnd >= tBegin);
+  static rl::spState<PlotPattern<DURATION>> getPattern(const std::shared_ptr<Metric>& metric,
+                                                       ANALYTIC_ENGINE::time tBegin,
+                                                       ANALYTIC_ENGINE::time tEnd) {
+    assert(tEnd > tBegin);
 
-    ANALYTIC_ENGINE::time beginI = this->getIndexAfter(tBegin);
-    ANALYTIC_ENGINE::time endI = this->getIndexBefore(tEnd);
+    ANALYTIC_ENGINE::time beginI = metric->getIndexAfter(tBegin);
+    ANALYTIC_ENGINE::time endI = metric->getIndexBefore(tEnd);
 
     if (endI - beginI <= 2) {
       throw "Not enough resolution";
@@ -150,10 +153,10 @@ class Metric {
     std::vector<double> y;
 
     for (size_t i = beginI, j = 0; i < endI; i++, j++) {
-      x.push_back(this->_data[i].second);
+      x.push_back(metric->_data[i].second);
     }
     for (size_t i = beginI, j = 0; i < endI; i++, j++) {
-      y.push_back(this->_data[i].first);
+      y.push_back(metric->_data[i].first);
     }
 
     tk::spline interpolatedPattern;
@@ -167,11 +170,11 @@ class Metric {
       data[i] = std::pair<double, double>({y, time});
     }
 
-    return PlotPattern<DURATION>(*this, data);
+    return rl::spState<PlotPattern<DURATION>>(new PlotPattern<DURATION>(metric, data));
   }
 
-  static std::vector<Metric*> parseMetrics(json metricsJSON) {
-    std::vector<Metric*> metrics;
+  static std::vector<std::shared_ptr<Metric>> parseMetrics(json metricsJSON) {
+    std::vector<std::shared_ptr<Metric>> metrics;
     for (auto metricJSON : metricsJSON) {
       // For some reason, exception is not being caught in try/catch block.
       if (metricJSON[0]["target"].is_null()) {
@@ -179,19 +182,18 @@ class Metric {
         continue;
       }
 
-      auto metric = new Metric(metricJSON[0]);
-      metrics.push_back(metric);
+      metrics.push_back(std::shared_ptr<Metric>(new Metric(metricJSON[0])));
     }
 
     return metrics;
   }
 
-  static std::pair<ANALYTIC_ENGINE::time, ANALYTIC_ENGINE::time> getMinMaxTime(const vector<Metric*> metrics) {
+  static std::pair<ANALYTIC_ENGINE::time, ANALYTIC_ENGINE::time> getMinMaxTime(const vector<shared_ptr<Metric>>& metrics) {
     ANALYTIC_ENGINE::time minMetricTime = std::accumulate(
         metrics.begin(),
         metrics.end(),
         metrics[0]->getTimeBegin(),
-        [](ANALYTIC_ENGINE::time currentMin, const Metric* m) {
+        [](ANALYTIC_ENGINE::time currentMin, const shared_ptr<Metric>& m) {
           if (currentMin > m->getTimeBegin()) { return m->getTimeBegin(); }
           return currentMin;
         });
@@ -201,7 +203,7 @@ class Metric {
         metrics.begin(),
         metrics.end(),
         metrics[0]->getTimeBegin(),
-        [](ANALYTIC_ENGINE::time currentMax, const Metric* m) {
+        [](ANALYTIC_ENGINE::time currentMax, const shared_ptr<Metric>& m) {
           if (currentMax < m->getTimeEnd()) { return m->getTimeEnd(); }
           return currentMax;
         });
@@ -210,14 +212,17 @@ class Metric {
   }
 
   template<size_t PATTERN_SIZE>
-  static vector<PlotPattern<PATTERN_SIZE>> getPatternsFromMetrics(
-      const vector<Metric*> metrics,
+  static vector<rl::spState<PlotPattern<PATTERN_SIZE>>> getPatternsFromMetrics(
+      const vector<shared_ptr<Metric>> metrics,
       ANALYTIC_ENGINE::time patternTimeBegin,
       ANALYTIC_ENGINE::time patternTimeEnd) {
-    vector<PlotPattern<PATTERN_SIZE>> patterns;
+    vector<rl::spState<PlotPattern<PATTERN_SIZE>>> patterns;
     for (auto metric : metrics) {
       try {
-        patterns.push_back(metric->getPattern<PATTERN_SIZE>(patternTimeBegin, patternTimeEnd));
+        patterns.push_back(Metric::getPattern<PATTERN_SIZE>(
+            metric,
+            patternTimeBegin,
+            patternTimeEnd));
       }catch(exception& e) {
         std::cerr << e.what() << std::endl;
       }catch(...) {
@@ -233,7 +238,7 @@ class Metric {
   string _metricName;
 };
 
-std::ostream& operator <<(std::ostream& stream, const Metric& pp) {
+inline std::ostream& operator <<(std::ostream& stream, const Metric& pp) {
   stream << "{ name: " << pp.getMetricName() << ", data: { ";
   for (auto d : pp.getData()) {
     stream << "(" << std::get<0>(d) << ", " << std::get<1>(d) << "), ";

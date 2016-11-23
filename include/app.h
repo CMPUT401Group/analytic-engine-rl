@@ -5,11 +5,21 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
-#include "plot-pattern.h"
+#include "declares.h"
+#include "plot-pattern-state.h"
 
-using namespace std;
+namespace app {
 
-namespace APP {
+void train(size_t iterationCount,
+           const vector<std::shared_ptr<Metric>> &metrics,
+           rl::spState<STATE> &goalState,
+           rl::AgentSupervised<STATE, ACTION> &agent,
+           size_t minMetricTime,
+           size_t maxMetricTime);
+
+void serializeResult(const string &resultFile,
+                     const multimap<rl::FLOAT, rl::StateAction<STATE, ACTION>> &rewardMultimap);
 
 }  // namespace APP

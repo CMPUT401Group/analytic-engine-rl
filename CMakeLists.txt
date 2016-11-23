@@ -3,7 +3,7 @@ project(analyticenginerl)
 
 include(CMakefiles/CMakeGenerateMainHeader)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -g")
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -ggdb")
 
 # Include all header file to just one.
 GenerateMainHeader(
@@ -20,4 +20,4 @@ add_subdirectory(test)
 add_subdirectory(src)
 
 add_executable(analytic-engine-rl-cli main.cpp)
-target_link_libraries(analytic-engine-rl-cli analyticenginerl)
+target_link_libraries(analytic-engine-rl-cli analyticenginerl rl)

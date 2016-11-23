@@ -6,7 +6,7 @@
 
 #include "plot-pattern-state.h"
 
-namespace AI {
+namespace rl {
 template<>
 class AgentSupervised<PlotPatternState<15>, PlotPatternState<15>>;
-}  // namespace AI
+}  // namespace rl

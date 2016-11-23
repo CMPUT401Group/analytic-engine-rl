@@ -68,18 +68,18 @@ SCENARIO("First order complexity test. Give a set of pattern P that entails a go
   GIVEN("A analytic-engine-environment is created.") {
     AnalyticEngineEnvironment<STATE, ACTION> aee;
 
-    AI::ActuatorBase<STATE, ACTION> actuator(aee);
+    rl::ActuatorBase<STATE, ACTION> actuator(aee);
     for (auto p : t00) { actuator.addAction(p); }
     for (auto p : t01) { actuator.addAction(p); }
     for (auto p : t02) { actuator.addAction(p); }
 
-    AI::Algorithm::Policy::EpsilonGreedy<STATE, ACTION> policy(1.0F);
-    AI::Algorithm::RL::Sarsa<STATE, ACTION> sarsaAlgorithm(0.1F, 0.9F, policy);
+    rl::Algorithm::Policy::EpsilonGreedy<STATE, ACTION> policy(1.0F);
+    rl::Algorithm::RL::Sarsa<STATE, ACTION> sarsaAlgorithm(0.1F, 0.9F, policy);
     sarsaAlgorithm.setDefaultStateActionValue(-1000000.0F);
 
-    AI::AgentSupervised<STATE, ACTION> agent(actuator, sarsaAlgorithm);
+    rl::AgentSupervised<STATE, ACTION> agent(actuator, sarsaAlgorithm);
 
-    WHEN("When trained for 1 data points, we should have a solution.") {
+    WHEN ("When trained for 1 data points, we should have a solution.") {
       agent.train(
           t01p00,  // The initial state.
           // Note that action=nextState. The important thing is, if the action/nextState don't entail goalState, there will be negative reward.
@@ -101,9 +101,9 @@ SCENARIO("First order complexity test. Give a set of pattern P that entails a go
       );
 
       THEN("State-Action value of t01p00->goal is the biggest.") {
-        AI::FLOAT t01p00Value = sarsaAlgorithm.getStateActionValue(AI::StateAction<STATE, ACTION>(t01p00, goalPatternState));
-        AI::FLOAT t01p01Value = sarsaAlgorithm.getStateActionValue(AI::StateAction<STATE, ACTION>(t01p01, goalPatternState));
-        AI::FLOAT t01p02Value = sarsaAlgorithm.getStateActionValue(AI::StateAction<STATE, ACTION>(t01p02, goalPatternState));
+        rl::FLOAT t01p00Value = sarsaAlgorithm.getStateActionValue(rl::StateAction<STATE, ACTION>(t01p00, goalPatternState));
+        rl::FLOAT t01p01Value = sarsaAlgorithm.getStateActionValue(rl::StateAction<STATE, ACTION>(t01p01, goalPatternState));
+        rl::FLOAT t01p02Value = sarsaAlgorithm.getStateActionValue(rl::StateAction<STATE, ACTION>(t01p02, goalPatternState));
         REQUIRE(t01p00Value > t01p01Value);
         REQUIRE(t01p00Value > t01p02Value);
       }
