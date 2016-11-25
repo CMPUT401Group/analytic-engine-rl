@@ -35,3 +35,6 @@ build/
 
 # IDE crap.
 .idea/
+cmake-build-debug/
+doc/
+latex/

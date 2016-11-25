@@ -16,7 +16,7 @@
 #include <memory>
 
 #include "declares.h"
-#include "spline.h"
+#include "../lib/spline.h"
 
 using std::vector;
 using std::array;
@@ -24,12 +24,24 @@ using std::string;
 
 class Metric;
 
-template <size_t DURATION>
+/*! \class PlotPattern
+ *  \brief A pottern that is found inside Metric.
+ *  \tparam RESOLUTION The number of times how x (time) is divided.
+ */
+template <size_t RESOLUTION>
 class PlotPattern {
  public:
-  using DATA = array<std::pair<double, double>, DURATION>;
+  using DATA = array<std::pair<double, double>, RESOLUTION>;
 
-  // todo: make equalityEpsilon a cli param.
+  /**
+   * TODO(jandres): make equalityEpsilon a cli param.
+   * TODO(jandres): Let this constructor extract those pattern, just give the tBegin and tEnd.
+   *
+   * @param metric Metric this pattern is related from.
+   * @param data The data acquired from the emtric.
+   * @param equalityEpsilon The lower the value, the lower the chance this pattern equals to other pattern
+   *                        (frame same metric).
+   */
   PlotPattern(const std::shared_ptr<Metric>& metric,
               const DATA& data,
               float equalityEpsilon = 0.08f) :
@@ -55,19 +67,28 @@ class PlotPattern {
         });
   }
 
+  /**
+   * @return The duration of this pattern.
+   */
   double getDuration() const {
-    return DURATION;
+    return this->getTimeEnd() - this->getTimeBegin();
   }
 
+  /**
+   * @return The begin time of the pattern.
+   */
   double getTimeBegin() const {
     return std::get<1>(this->_data.front());
   }
 
+  /**
+   * @return The end time of the pattern.
+   */
   double getTimeEnd() const {
     return std::get<1>(this->_data.back());
   }
 
-  bool operator<(const PlotPattern<DURATION>& rhs) const {
+  bool operator<(const PlotPattern<RESOLUTION>& rhs) const {
     if (*(this->_metric) < *(rhs._metric)) {
       return true;
     }
@@ -80,7 +101,7 @@ class PlotPattern {
     return false;
   }
 
-  bool operator>(const PlotPattern<DURATION>& rhs) const {
+  bool operator>(const PlotPattern<RESOLUTION>& rhs) const {
     if (*(this->_metric) > *(rhs._metric)) {
       return true;
     }
@@ -93,15 +114,15 @@ class PlotPattern {
     return false;
   }
 
-  bool operator<=(const PlotPattern<DURATION>& rhs) const {
+  bool operator<=(const PlotPattern<RESOLUTION>& rhs) const {
     return !(*this > rhs);
   }
 
-  bool operator>=(const PlotPattern<DURATION>& rhs) const {
+  bool operator>=(const PlotPattern<RESOLUTION>& rhs) const {
     return !(*this < rhs);
   }
 
-  bool operator==(const PlotPattern<DURATION>& rhs) const {
+  bool operator==(const PlotPattern<RESOLUTION>& rhs) const {
     if (this == &rhs) {
       return true;
     }
@@ -110,66 +131,99 @@ class PlotPattern {
         this->getAbsoluteArea(rhs) < this->_equalityEpsilon;
   }
 
-  bool operator!=(const PlotPattern<DURATION>& rhs) const {
+  bool operator!=(const PlotPattern<RESOLUTION>& rhs) const {
     return !(*this == rhs);
   }
 
-  float getAbsoluteArea(const PlotPattern<DURATION>& rhs) const {
+  /**
+   * Gets the absolute area between two pattern, ignoring intersection.
+   * @param rhs The metric to calculate the diff from.
+   * @return The accumulative diff all positive. Better for diff not being offseted by negative.
+   */
+  float getAbsoluteArea(const PlotPattern<RESOLUTION>& rhs) const {
     float area = 0.0;
 
-    for (size_t i = 0; i < DURATION; i++) {
+    for (size_t i = 0; i < RESOLUTION; i++) {
       area += std::abs(this->getNormalizeY(i) - rhs.getNormalizeY(i));
     }
 
-    return area/DURATION;
+    return area/RESOLUTION;
   }
 
-  float getArea(const PlotPattern<DURATION>& rhs) const {
+  /**
+   * Gets the area between two pattern, taking into account the intersection.
+   * @param rhs The metric to calculate the diff from.
+   * @return The accumulative diff, including negative.
+   */
+  float getArea(const PlotPattern<RESOLUTION>& rhs) const {
     float area = 0.0;
 
-    for (size_t i = 0; i < DURATION; i++) {
+    for (size_t i = 0; i < RESOLUTION; i++) {
       area += (this->getNormalizeY(i) - rhs.getNormalizeY(i));
     }
 
-    return area/DURATION;
+    return area/RESOLUTION;
   }
 
+  /**
+   * Given an index, acquires a normalize y value [0, 1].
+   * @param index The index to acquire the y value.
+   * @return A normalize y value [0, 1]
+   */
   float getNormalizeY(size_t index) const {
     float magnitude = this->_max - this->_min;
     return (std::get<0>(this->_data.at(index)) - this->_min) / magnitude;
   }
 
+  /**
+   * @return The data associated with this metrics.
+   */
   DATA& getData() {
     return this->_data;
   }
 
+  /**
+   * @return The data associated with this metrics.
+   */
   const DATA& getData() const {
     return this->_data;
   }
 
+  /**
+   * @return The associated metric.
+   */
   std::shared_ptr<Metric>& getMetric() {
     return this->_metric;
   }
 
+  /**
+   * @return The associated metric.
+   */
   const std::shared_ptr<Metric>& getMetric() const {
     return this->_metric;
   }
 
+  /**
+   * @return The name of the associated metric.
+   */
   string getMetricName() const {
     return this->_metric->getMetricName();
   }
 
+  /**
+   * @return Give a unique id for this pattern.
+   */
   size_t getID() const {
     size_t id = 0;
-    auto base = DURATION * 10;
-    for (size_t i = 0; i < DURATION; i++) {
+    auto base = RESOLUTION * 10;
+    for (size_t i = 0; i < RESOLUTION; i++) {
       id += std::ceil(this->getNormalizeY(i) * 5) * base * i;
     }
 
     return id;
   }
 
-  virtual PlotPattern<DURATION>& operator=(PlotPattern<DURATION>& rhs) {
+  virtual PlotPattern<RESOLUTION>& operator=(PlotPattern<RESOLUTION>& rhs) {
     if (this == &rhs) {
       return *this;
     }
@@ -180,7 +234,13 @@ class PlotPattern {
     return *this;
   }
 
-  static void getPatternIndexFromMetricName(vector<rl::spState<PlotPattern<DURATION>>>& patterns,
+  /**
+   * Given a metricName return the index of the pattern with the associated metricName.
+   * @param patterns A vector of patterns.
+   * @param metricName The name of the metric.
+   * @param patternIndex Index of the pattern with the associated pattern name.
+   */
+  static void getPatternIndexFromMetricName(vector<rl::spState<PlotPattern<RESOLUTION>>>& patterns,
                                      string metricName,
                                      size_t& patternIndex) {
     for (; patternIndex < patterns.size(); patternIndex++) {
@@ -198,8 +258,8 @@ class PlotPattern {
   float _min, _max;
 };
 
-template <size_t DURATION>
-std::ostream& operator <<(std::ostream& stream, const PlotPattern<DURATION>& pp) {
+template <size_t RESOLUTION>
+std::ostream& operator <<(std::ostream& stream, const PlotPattern<RESOLUTION>& pp) {
   stream << "{ name: " << pp.getMetricName() << ", data: { ";
   for (auto d : pp.getData()) {
     stream << "(" << std::get<0>(d) << ", " << std::get<1>(d) << "), ";
@@ -209,3 +269,5 @@ std::ostream& operator <<(std::ostream& stream, const PlotPattern<DURATION>& pp)
 }
 
 using PlotPatternSpecialized = PlotPattern<ANALYTIC_ENGINE::PATTERN_SIZE>;
+using STATE = PlotPattern<ANALYTIC_ENGINE::PATTERN_SIZE>;
+using ACTION = STATE;

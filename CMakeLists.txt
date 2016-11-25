@@ -15,6 +15,7 @@ MESSAGE(STATUS "Generated global header file")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/build)
+include_directories(${CMAKE_SOURCE_DIR}/lib)
 
 add_subdirectory(test)
 add_subdirectory(src)

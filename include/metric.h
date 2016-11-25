@@ -11,19 +11,28 @@
 #include <string>
 #include <memory>
 
-#include "json.hpp"
+#include "../lib/json.hpp"
 
 #include "declares.h"
-#include "spline.h"
+#include "../lib/spline.h"
 
 using std::vector;
 using std::array;
 using std::string;
 using json = nlohmann::json;
 
+/*! \class Metric
+ *  \brief Represents graphite metric.
+ */
 class Metric {
  public:
+  // The data type of how the metric is stored.
   using DATA = vector<ANALYTIC_ENGINE::point>;
+
+  /**
+   * JSON constructor.
+   * @param j Json metric (from graphite) to be parsed.
+   */
   Metric(json& j) throw(std::domain_error) {
     if (j["target"].is_null()) {
       throw new std::domain_error("Given json is invalid.");
@@ -35,6 +44,15 @@ class Metric {
       this->_data.push_back(ANALYTIC_ENGINE::point({d[0], d[1]}));
     }
   }
+
+  /**
+   * Constructor.
+   * @param metricName Name of the metric. 
+   * @param data The data in the metric.
+   */
+  Metric(string metricName, const DATA& data) :
+      _metricName(metricName),
+      _data(data) {}
 
   bool operator>(const Metric& rhs) const {
     return this->getMetricName() > rhs.getMetricName();
@@ -56,20 +74,35 @@ class Metric {
     return this == &rhs || this->getMetricName() == rhs.getMetricName();
   }
 
-  Metric(string metricName, const DATA& data) : _metricName(metricName), _data(data) {}
-
+  /**
+   * Getter for metric duration.
+   * @return Duration of this metric (unixtimestamp).
+   */
   ANALYTIC_ENGINE::time getDuration() const {
     return this->getTimeEnd() - this->getTimeBegin();
   }
 
+  /**
+   * Getter for earliest time for the metric.
+   * @return The earliest time in metric (unixtimestamp). 
+   */
   ANALYTIC_ENGINE::time getTimeBegin() const {
     return std::get<1>(this->_data.front());
   }
 
+  /**
+   * Getter for end time for the metric.
+   * @return The end time in metric (unixtimestamp). 
+   */
   ANALYTIC_ENGINE::time getTimeEnd() const {
     return std::get<1>(this->_data.back());
   }
 
+  /**
+   * Given a time, returns the nearest "greater time" located in the metric.
+   * @param time (unixtimestamp).
+   * @return the nearest "greater time" located in the metric.
+   */
   ANALYTIC_ENGINE::time getTimeAfter(ANALYTIC_ENGINE::time time) const {
     for (auto d : this->_data) {
       if (std::get<1>(d) >= time) {
@@ -80,6 +113,11 @@ class Metric {
     assert(false /* Given time exceeded range. */);
   }
 
+  /***
+   * Given a time, returns the nearest "time less-than" located in the metric.
+   * @param time (unixtimestamp).
+   * @return the nearest "time less-than" located in the metric.
+   */
   ANALYTIC_ENGINE::time getTimeBefore(ANALYTIC_ENGINE::time time) const {
     for (auto iter = this->_data.rbegin(); iter != this->_data.rend(); iter++) {
       auto d = *iter;
@@ -91,6 +129,11 @@ class Metric {
     assert(false /* Given time is less than range. */);
   }
 
+ /**
+   * Given a time, returns the nearest index greater than the current time.
+   * @param time (unixtimestamp).
+   * @return the nearest index greater than the current time index.
+   */
   ANALYTIC_ENGINE::time getIndexAfter(ANALYTIC_ENGINE::time time) const {
     if (time > this->getTimeEnd()) {
       throw "time exceeded Metric::getTimeEnd()";
@@ -107,6 +150,11 @@ class Metric {
     assert(false /* Given time exceeded range. */);
   }
 
+  /**
+   * Given a time, returns the nearest index less-than than the current time.
+   * @param time (unixtimestamp).
+   * @return the nearest index less than the current time.
+   */
   ANALYTIC_ENGINE::time getIndexBefore(ANALYTIC_ENGINE::time time) const {
     if (time < this->getTimeBegin()) {
       throw "time is less than Metric::getTimeBegin()";
@@ -124,20 +172,42 @@ class Metric {
     assert(false /* Given time is less than range. */);
   }
 
+  /**
+   * To retrieve the metrics.
+   * @return The data represented by the metrics. 
+   */
   DATA& getData() {
     return this->_data;
   }
 
+  /**
+   * To retrieve the metrics.
+   * @return The data represented by the metrics. 
+   */
   const DATA& getData() const {
     return this->_data;
   }
 
+  /**
+   * To retrieve the metric name.
+   * @return The name of the metric.
+   */
   string getMetricName() const {
     return this->_metricName;
   }
 
-  template <size_t DURATION>
-  static rl::spState<PlotPattern<DURATION>> getPattern(const std::shared_ptr<Metric>& metric,
+  /**
+   * Acquires a pattern from a given matrix, given a tBegin, and tEnd.
+   * @static
+   * @tparam RESOLUTION Resolution of pattern to generate.
+   *
+   * @param metric Metric to extract pattern from.
+   * @param tBegin The beginning time in metric.
+   * @param tEnd The end time in metric.
+   * @return extracted pattern.
+   */
+  template <size_t RESOLUTION>
+  static rl::spState<PlotPattern<RESOLUTION>> getPattern(const std::shared_ptr<Metric>& metric,
                                                        ANALYTIC_ENGINE::time tBegin,
                                                        ANALYTIC_ENGINE::time tEnd) {
     assert(tEnd > tBegin);
@@ -162,17 +232,22 @@ class Metric {
     tk::spline interpolatedPattern;
     interpolatedPattern.set_points(x, y);
 
-    typename PlotPattern<DURATION>::DATA data;
-    double durationIncrement = static_cast<double>(tEnd - tBegin)/DURATION;
-    for (size_t i = 0; i < DURATION; i++) {
+    typename PlotPattern<RESOLUTION>::DATA data;
+    double durationIncrement = static_cast<double>(tEnd - tBegin)/RESOLUTION;
+    for (size_t i = 0; i < RESOLUTION; i++) {
       double time = static_cast<double>(tBegin) + durationIncrement*i;
       float y = interpolatedPattern(time);
       data[i] = std::pair<double, double>({y, time});
     }
 
-    return rl::spState<PlotPattern<DURATION>>(new PlotPattern<DURATION>(metric, data));
+    return rl::spState<PlotPattern<RESOLUTION>>(new PlotPattern<RESOLUTION>(metric, data));
   }
 
+  /**
+   * Given a json representing an array of metrics, returns an array of shared_ptr<Metric>.
+   * @param metricsJSON The json representing an array of metrics.
+   * @return an array of shared_ptr<Metric>.
+   */
   static std::vector<std::shared_ptr<Metric>> parseMetrics(json metricsJSON) {
     std::vector<std::shared_ptr<Metric>> metrics;
     for (auto metricJSON : metricsJSON) {
@@ -188,6 +263,12 @@ class Metric {
     return metrics;
   }
 
+  /**
+   * Given a vector of metrics, acquires the min/max time.
+   * @param metrics Array of metrics to acquire the min/max time.
+   * @return <min time, max time> both in unix timestamps.
+   *
+   */
   static std::pair<ANALYTIC_ENGINE::time, ANALYTIC_ENGINE::time> getMinMaxTime(const vector<shared_ptr<Metric>>& metrics) {
     ANALYTIC_ENGINE::time minMetricTime = std::accumulate(
         metrics.begin(),
@@ -211,6 +292,15 @@ class Metric {
     return  {minMetricTime, maxMetricTime};
   }
 
+  /**
+   * Acquires patterns from a given matrix, given a tBegin, and tEnd.
+   * @static
+   * @tparam PATTERN_SIZE The resolution of the x axist to be extracted. The higher, the higher the definition.
+   * @param metrics An array of metric to extract a pattern from.
+   * @param patternTimeBegin The begin time of the pattern to extract wihtin the metric.
+   * @param patternTimeEnd The end time of the pattern to extract within the metric.
+   * @return array of extracted pattern.
+   */
   template<size_t PATTERN_SIZE>
   static vector<rl::spState<PlotPattern<PATTERN_SIZE>>> getPatternsFromMetrics(
       const vector<shared_ptr<Metric>> metrics,

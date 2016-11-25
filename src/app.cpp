@@ -10,9 +10,9 @@
 
 #include "app.h"
 #include "declares.h"
-#include "plot-pattern-state.h"
+#include "plot-pattern.h"
 #include "metric.h"
-#include "json.hpp"
+#include "../lib/json.hpp"
 
 using json = nlohmann::json;
 

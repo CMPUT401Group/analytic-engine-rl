@@ -1,4 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/lib)
 
 file(GLOB SRC_FILES "*.cpp")
 

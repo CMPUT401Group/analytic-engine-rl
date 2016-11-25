@@ -26,7 +26,7 @@ As _n_ increase and the bigger our metric time span, the better AI's prediction 
 * g++-4.9 or greater
 * armadillo
 * cppunit
-* [JoeyAndres/rl](https://github.com/JoeyAndres/rl) hehe, my pride and joy.
+* [JoeyAndres/rl v2.0.1-beta.3](https://github.com/JoeyAndres/rl/releases/tag/v2.0.1-beta.3) hehe, my pride and joy.
 
 ### Installing dependencies Ubuntu:
 
