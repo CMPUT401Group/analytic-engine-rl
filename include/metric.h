@@ -252,12 +252,12 @@ class Metric {
     std::vector<std::shared_ptr<Metric>> metrics;
     for (auto metricJSON : metricsJSON) {
       // For some reason, exception is not being caught in try/catch block.
-      if (metricJSON[0]["target"].is_null()) {
+      if (metricJSON["target"].is_null()) {
         //std::cerr << "Invalid metric" << std::endl;
         continue;
       }
 
-      metrics.push_back(std::shared_ptr<Metric>(new Metric(metricJSON[0])));
+      metrics.push_back(std::shared_ptr<Metric>(new Metric(metricJSON)));
     }
 
     return metrics;
