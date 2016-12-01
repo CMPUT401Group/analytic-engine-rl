@@ -21,7 +21,7 @@ namespace app {
 void train(size_t iterationCount,
            const vector<std::shared_ptr<Metric>> &metrics,
            shared_ptr<STATE> &goalState,
-           rl::AgentSupervised<STATE, ACTION> &agent,
+           rl::AgentSupervised<rl::floatVector, rl::floatVector> &agent,
            size_t minMetricTime,
            size_t maxMetricTime) {
 
@@ -58,17 +58,15 @@ void train(size_t iterationCount,
           patternTimeBegin,
           patternTimeEnd);
 
-      try {
-        agent.train(
-            currentPattern,
-            goalState,
-            -goalState->getAbsoluteArea(*currentGoalPattern),  // Reward.
-            goalState);
-      } catch (...) {}
+      agent.train(
+          currentPattern->getGradientDescentParameters(),
+          ANALYTIC_ENGINE::goalAction,
+          -goalState->getAbsoluteArea(*currentGoalPattern),  // Reward.
+          goalState->getGradientDescentParameters());
     }
 
     std::cout << "Traning: "
-              << std::ceil((static_cast<float>(i) / static_cast<float>(iterationCount)) * 100.0f)
+              << (static_cast<float>(i) / static_cast<float>(iterationCount)) * 100.0f
               << "%"
               << std::endl;
   }

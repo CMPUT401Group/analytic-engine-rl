@@ -172,6 +172,9 @@ class PlotPattern {
    */
   float getNormalizeY(size_t index) const {
     float magnitude = this->_max - this->_min;
+    if (magnitude < 0.00000001f) {
+      return 0.0f;
+    }
     return (std::get<0>(this->_data.at(index)) - this->_min) / magnitude;
   }
 
@@ -250,11 +253,21 @@ class PlotPattern {
     }
   }
 
+  rl::spFloatVector getGradientDescentParameters() {
+    rl::spFloatVector rv(new rl::floatVector());
+
+    for (size_t i = 0; i < RESOLUTION; i++) {
+      rv->push_back(this->getNormalizeY(i));
+    }
+
+    rv->push_back(static_cast<float>(this->_metric->getMetricIndex()));
+    return rv;
+  }
+
  protected:
   DATA _data;
   float _equalityEpsilon;
   std::shared_ptr<Metric> _metric;
-
   float _min, _max;
 };
 

@@ -107,12 +107,34 @@ int main(int argc, char** argv) {
 
   auto goalState = patterns[goalPatternIndex];
 
-  rl::spActionSet<ACTION> actions({ goalState });
-  auto actionSet = rl::ActionSet<ACTION>(actions);
-  rl::policy::EpsilonGreedy<STATE, ACTION> policy(1.0F);
-  rl::algorithm::Sarsa<STATE, ACTION> sarsaAlgorithm(stepSize, discountRate, policy);
-  sarsaAlgorithm.setDefaultStateActionValue(initialReward);
-  rl::AgentSupervised<STATE, ACTION> agent(actionSet, sarsaAlgorithm);
+  // Setup policy.
+  rl::policy::EpsilonGreedy<rl::floatVector, rl::floatVector> policy(1.0F);
+  // Setup tile coding.
+  vector <rl::coding::DimensionInfo<rl::FLOAT>> dimensionalInfoVector = {
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y1
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y2
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y3
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y4
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y5
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y6
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y7
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y8
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y9
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 1.0F, 10),  // y10
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 11042.0F, 11043, 0.0F),  // Metrics that will lead to goalState.
+      rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 0.0F, 1, 0.0F),  // Metrics that will lead to goalState.
+      //rl::coding::DimensionInfo<rl::FLOAT>(0.0F, 11042.0F, 11043, 0.0F),  // Metrics that will lead to goalState.
+  };
+
+  std::cout << "Allocating Memory." << std::endl;
+  rl::coding::TileCodeMurMur tileCode(dimensionalInfoVector, 10, 600000000);  // Setup tile coding with 10 offsets.
+  rl::algorithm::QLearningETGD qLearning(tileCode, stepSize, discountRate, 0.9F, policy);
+  std::cout << "Finished Allocating Memory." << std::endl;
+
+  rl::spActionSet<rl::floatVector> actions({ ANALYTIC_ENGINE::goalAction });
+  auto actionSet = rl::ActionSet<rl::floatVector>(actions);
+  qLearning.setDefaultStateActionValue(initialReward);
+  rl::AgentSupervised<rl::floatVector, rl::floatVector> agent(actionSet, qLearning);
 
   app::train(iterationCount,
              filteredMetrics,
@@ -121,10 +143,19 @@ int main(int argc, char** argv) {
              minMaxMetricTime.first,
              minMaxMetricTime.second);
 
-  auto rewardMultimap = sarsaAlgorithm.getStateActionPairContainer().getReverseMap();
+  /*auto rewardMultimap = qLearning.getStateActionPairContainer().getReverseMap();*/
 
-  //std::cout << std::endl << "Results (Organized from most entailment to least entailment): " << std::endl;
-  app::serializeResult(resultFile, rewardMultimap);
+  // Get the reward for each metrics.
+  std::multimap<rl::FLOAT, rl::StateAction<STATE, ACTION>> rewardMap;
+  for (auto p : patterns) {
+    auto reward =  qLearning.getStateActionValue(rl::StateAction<rl::floatVector, rl::floatVector>(
+        p->getGradientDescentParameters(), ANALYTIC_ENGINE::goalAction));
+    rewardMap.insert(std::pair<rl::FLOAT, rl::StateAction<STATE, ACTION>>(
+        reward, rl::StateAction<STATE, ACTION>(p, goalState)
+    ));
+  }
+
+  app::serializeResult(resultFile, rewardMap);
 
   return 0;
 }

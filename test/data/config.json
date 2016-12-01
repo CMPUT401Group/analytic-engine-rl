@@ -1,10 +1,10 @@
 {
   "goalPattern": {
-    "metric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
-    "timeBegin": 1474111311,
-    "timeEnd": 1474111440
+    "metric": "summarize(invidi.webapp.localhost_localdomain.request.total_response_time.mean, \"10min\", \"avg\")",
+    "timeBegin": 1474106851,
+    "timeEnd":   1474153707
   },
-  "iterationCount": 200,
+  "iterationCount": 1000,
   "initialReward": -1000.0,
   "reinforcementLearning": {
     "stepSize": 0.1,

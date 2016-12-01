@@ -26,7 +26,7 @@ namespace app {
 void train(size_t iterationCount,
            const vector<std::shared_ptr<Metric>> &metrics,
            rl::spState<STATE> &goalState,
-           rl::AgentSupervised<STATE, ACTION> &agent,
+           rl::AgentSupervised<rl::floatVector, rl::floatVector> &agent,
            size_t minMetricTime,
            size_t maxMetricTime);
 

@@ -33,7 +33,8 @@ class Metric {
    * JSON constructor.
    * @param j Json metric (from graphite) to be parsed.
    */
-  Metric(json& j) throw(std::domain_error) {
+  Metric(json& j, size_t metricIndex) throw(std::domain_error) :
+      _metricIndex(metricIndex) {
     if (j["target"].is_null()) {
       throw new std::domain_error("Given json is invalid.");
     }
@@ -50,9 +51,10 @@ class Metric {
    * @param metricName Name of the metric. 
    * @param data The data in the metric.
    */
-  Metric(string metricName, const DATA& data) :
+  Metric(string metricName, const DATA& data, size_t metricIndex) :
       _metricName(metricName),
-      _data(data) {}
+      _data(data),
+      _metricIndex(metricIndex) {}
 
   bool operator>(const Metric& rhs) const {
     return this->getMetricName() > rhs.getMetricName();
@@ -196,6 +198,13 @@ class Metric {
     return this->_metricName;
   }
 
+  /*
+   * @return Index of metrics.
+   */
+  size_t getMetricIndex() const {
+    return this->_metricIndex;
+  }
+
   /**
    * Acquires a pattern from a given matrix, given a tBegin, and tEnd.
    * @static
@@ -250,6 +259,7 @@ class Metric {
    */
   static std::vector<std::shared_ptr<Metric>> parseMetrics(json metricsJSON) {
     std::vector<std::shared_ptr<Metric>> metrics;
+    size_t currentIndex = 0;
     for (auto metricJSON : metricsJSON) {
       // For some reason, exception is not being caught in try/catch block.
       if (metricJSON["target"].is_null()) {
@@ -257,7 +267,8 @@ class Metric {
         continue;
       }
 
-      metrics.push_back(std::shared_ptr<Metric>(new Metric(metricJSON)));
+      metrics.push_back(std::shared_ptr<Metric>(new Metric(metricJSON, currentIndex)));
+      currentIndex++;
     }
 
     return metrics;
@@ -326,6 +337,7 @@ class Metric {
  protected:
   DATA _data;
   string _metricName;
+  size_t _metricIndex;
 };
 
 inline std::ostream& operator <<(std::ostream& stream, const Metric& pp) {
