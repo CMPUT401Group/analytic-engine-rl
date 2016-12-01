@@ -1,5 +1,5 @@
 /**
- * analytic-engine-rl-cli
+ * analytic-engine-rl
  * Copyright (C) 2016  Joey Andres<jandres@ualberta.ca>
  *
  * This program is free software: you can redistribute it and/or modify

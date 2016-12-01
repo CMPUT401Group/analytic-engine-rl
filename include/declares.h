@@ -6,7 +6,7 @@
 #include <utility>
 #include <rl>
 
-namespace ANALYTIC_ENGINE {
+namespace app {
 const size_t PATTERN_SIZE = 10;
 using time = size_t;
 using point = std::pair<float, time>;

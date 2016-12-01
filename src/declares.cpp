@@ -1,6 +1,6 @@
 #include "declares.h"
 
-namespace ANALYTIC_ENGINE {
+namespace app {
 rl::spFloatVector goalAction(new rl::floatVector({ 0 }));
 }
 

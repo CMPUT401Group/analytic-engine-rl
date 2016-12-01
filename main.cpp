@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
             << goalPatternTimeDuration << std::endl;
 
   vector<rl::spState<STATE>> patterns =
-      Metric::getPatternsFromMetrics<ANALYTIC_ENGINE::PATTERN_SIZE>(
+      Metric::getPatternsFromMetrics<app::PATTERN_SIZE>(
           metrics,
           goalPatternTimeBegin,
           goalPatternTimeEnd);
@@ -128,10 +128,10 @@ int main(int argc, char** argv) {
 
   std::cout << "Allocating Memory." << std::endl;
   rl::coding::TileCodeMurMur tileCode(dimensionalInfoVector, 10, 600000000);  // Setup tile coding with 10 offsets.
-  rl::algorithm::QLearningETGD qLearning(tileCode, stepSize, discountRate, 0.9F, policy);
+  rl::algorithm::QLearningGD qLearning(tileCode, stepSize, discountRate, 0.9F, policy);
   std::cout << "Finished Allocating Memory." << std::endl;
 
-  rl::spActionSet<rl::floatVector> actions({ ANALYTIC_ENGINE::goalAction });
+  rl::spActionSet<rl::floatVector> actions({ app::goalAction });
   auto actionSet = rl::ActionSet<rl::floatVector>(actions);
   qLearning.setDefaultStateActionValue(initialReward);
   rl::AgentSupervised<rl::floatVector, rl::floatVector> agent(actionSet, qLearning);
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
   std::multimap<rl::FLOAT, rl::StateAction<STATE, ACTION>> rewardMap;
   for (auto p : patterns) {
     auto reward =  qLearning.getStateActionValue(rl::StateAction<rl::floatVector, rl::floatVector>(
-        p->getGradientDescentParameters(), ANALYTIC_ENGINE::goalAction));
+        p->getGradientDescentParameters(), app::goalAction));
     rewardMap.insert(std::pair<rl::FLOAT, rl::StateAction<STATE, ACTION>>(
         reward, rl::StateAction<STATE, ACTION>(p, goalState)
     ));

@@ -52,7 +52,7 @@ class PlotPattern {
         data.begin(),
         data.end(),
         data.front().first,
-        [](float currentMin, const ANALYTIC_ENGINE::point& p) {
+        [](float currentMin, const app::point& p) {
           if (currentMin > p.first) { return p.first; }
           return currentMin;
         });
@@ -61,7 +61,7 @@ class PlotPattern {
         data.begin(),
         data.end(),
         data.front().first,
-        [](float currentMax, const ANALYTIC_ENGINE::point& p) {
+        [](float currentMax, const app::point& p) {
           if (currentMax < p.first) { return p.first; }
           return currentMax;
         });
@@ -281,6 +281,6 @@ std::ostream& operator <<(std::ostream& stream, const PlotPattern<RESOLUTION>& p
   return stream;
 }
 
-using PlotPatternSpecialized = PlotPattern<ANALYTIC_ENGINE::PATTERN_SIZE>;
-using STATE = PlotPattern<ANALYTIC_ENGINE::PATTERN_SIZE>;
+using PlotPatternSpecialized = PlotPattern<app::PATTERN_SIZE>;
+using STATE = PlotPattern<app::PATTERN_SIZE>;
 using ACTION = STATE;

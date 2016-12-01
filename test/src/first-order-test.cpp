@@ -13,7 +13,7 @@ using std::array;
 using std::pair;
 using std::make_pair;
 
-using ANALYTIC_ENGINE::point;
+using app::point;
 
 using p = point;
 

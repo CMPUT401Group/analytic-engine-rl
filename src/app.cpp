@@ -36,14 +36,14 @@ void train(size_t iterationCount,
       maxMetricTime - goalPatternTimeDuration);
 
   for (size_t i = 0; i < iterationCount; i++) {
-    ANALYTIC_ENGINE::time patternTimeBegin = dis(gen);
-    ANALYTIC_ENGINE::time patternTimeEnd = patternTimeBegin + goalPatternTimeDuration;
+    app::time patternTimeBegin = dis(gen);
+    app::time patternTimeEnd = patternTimeBegin + goalPatternTimeDuration;
 
     auto goalMetric = goalState->getMetric();
 
     rl::spState<STATE> currentGoalPattern;
     try {
-      currentGoalPattern = Metric::getPattern<ANALYTIC_ENGINE::PATTERN_SIZE>(
+      currentGoalPattern = Metric::getPattern<app::PATTERN_SIZE>(
           goalMetric,
           patternTimeBegin,
           patternTimeEnd);
@@ -53,14 +53,14 @@ void train(size_t iterationCount,
     }
 
     for (auto metric : metrics) {
-      auto currentPattern = Metric::getPattern<ANALYTIC_ENGINE::PATTERN_SIZE>(
+      auto currentPattern = Metric::getPattern<app::PATTERN_SIZE>(
           metric,
           patternTimeBegin,
           patternTimeEnd);
 
       agent.train(
           currentPattern->getGradientDescentParameters(),
-          ANALYTIC_ENGINE::goalAction,
+          app::goalAction,
           -goalState->getAbsoluteArea(*currentGoalPattern),  // Reward.
           goalState->getGradientDescentParameters());
     }

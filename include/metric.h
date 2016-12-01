@@ -27,7 +27,7 @@ using json = nlohmann::json;
 class Metric {
  public:
   // The data type of how the metric is stored.
-  using DATA = vector<ANALYTIC_ENGINE::point>;
+  using DATA = vector<app::point>;
 
   /**
    * JSON constructor.
@@ -42,7 +42,7 @@ class Metric {
     this->_metricName = j["target"];
     for (auto d : j["datapoints"]) {
       d[0] = d[0].is_null() ? 0 : (int)d[0];
-      this->_data.push_back(ANALYTIC_ENGINE::point({d[0], d[1]}));
+      this->_data.push_back(app::point({d[0], d[1]}));
     }
   }
 
@@ -80,7 +80,7 @@ class Metric {
    * Getter for metric duration.
    * @return Duration of this metric (unixtimestamp).
    */
-  ANALYTIC_ENGINE::time getDuration() const {
+  app::time getDuration() const {
     return this->getTimeEnd() - this->getTimeBegin();
   }
 
@@ -88,7 +88,7 @@ class Metric {
    * Getter for earliest time for the metric.
    * @return The earliest time in metric (unixtimestamp). 
    */
-  ANALYTIC_ENGINE::time getTimeBegin() const {
+  app::time getTimeBegin() const {
     return std::get<1>(this->_data.front());
   }
 
@@ -96,7 +96,7 @@ class Metric {
    * Getter for end time for the metric.
    * @return The end time in metric (unixtimestamp). 
    */
-  ANALYTIC_ENGINE::time getTimeEnd() const {
+  app::time getTimeEnd() const {
     return std::get<1>(this->_data.back());
   }
 
@@ -105,7 +105,7 @@ class Metric {
    * @param time (unixtimestamp).
    * @return the nearest "greater time" located in the metric.
    */
-  ANALYTIC_ENGINE::time getTimeAfter(ANALYTIC_ENGINE::time time) const {
+  app::time getTimeAfter(app::time time) const {
     for (auto d : this->_data) {
       if (std::get<1>(d) >= time) {
         return std::get<1>(d);
@@ -120,7 +120,7 @@ class Metric {
    * @param time (unixtimestamp).
    * @return the nearest "time less-than" located in the metric.
    */
-  ANALYTIC_ENGINE::time getTimeBefore(ANALYTIC_ENGINE::time time) const {
+  app::time getTimeBefore(app::time time) const {
     for (auto iter = this->_data.rbegin(); iter != this->_data.rend(); iter++) {
       auto d = *iter;
       if (std::get<1>(d) <= time) {
@@ -136,7 +136,7 @@ class Metric {
    * @param time (unixtimestamp).
    * @return the nearest index greater than the current time index.
    */
-  ANALYTIC_ENGINE::time getIndexAfter(ANALYTIC_ENGINE::time time) const {
+  app::time getIndexAfter(app::time time) const {
     if (time > this->getTimeEnd()) {
       throw "time exceeded Metric::getTimeEnd()";
     }
@@ -157,7 +157,7 @@ class Metric {
    * @param time (unixtimestamp).
    * @return the nearest index less than the current time.
    */
-  ANALYTIC_ENGINE::time getIndexBefore(ANALYTIC_ENGINE::time time) const {
+  app::time getIndexBefore(app::time time) const {
     if (time < this->getTimeBegin()) {
       throw "time is less than Metric::getTimeBegin()";
     }
@@ -217,12 +217,12 @@ class Metric {
    */
   template <size_t RESOLUTION>
   static rl::spState<PlotPattern<RESOLUTION>> getPattern(const std::shared_ptr<Metric>& metric,
-                                                       ANALYTIC_ENGINE::time tBegin,
-                                                       ANALYTIC_ENGINE::time tEnd) {
+                                                       app::time tBegin,
+                                                       app::time tEnd) {
     assert(tEnd > tBegin);
 
-    ANALYTIC_ENGINE::time beginI = metric->getIndexAfter(tBegin);
-    ANALYTIC_ENGINE::time endI = metric->getIndexBefore(tEnd);
+    app::time beginI = metric->getIndexAfter(tBegin);
+    app::time endI = metric->getIndexBefore(tEnd);
 
     if (endI - beginI <= 2) {
       throw "Not enough resolution";
@@ -280,22 +280,22 @@ class Metric {
    * @return <min time, max time> both in unix timestamps.
    *
    */
-  static std::pair<ANALYTIC_ENGINE::time, ANALYTIC_ENGINE::time> getMinMaxTime(const vector<shared_ptr<Metric>>& metrics) {
-    ANALYTIC_ENGINE::time minMetricTime = std::accumulate(
+  static std::pair<app::time, app::time> getMinMaxTime(const vector<shared_ptr<Metric>>& metrics) {
+    app::time minMetricTime = std::accumulate(
         metrics.begin(),
         metrics.end(),
         metrics[0]->getTimeBegin(),
-        [](ANALYTIC_ENGINE::time currentMin, const shared_ptr<Metric>& m) {
+        [](app::time currentMin, const shared_ptr<Metric>& m) {
           if (currentMin > m->getTimeBegin()) { return m->getTimeBegin(); }
           return currentMin;
         });
 
     // Get max metric time.
-    ANALYTIC_ENGINE::time maxMetricTime = std::accumulate(
+    app::time maxMetricTime = std::accumulate(
         metrics.begin(),
         metrics.end(),
         metrics[0]->getTimeBegin(),
-        [](ANALYTIC_ENGINE::time currentMax, const shared_ptr<Metric>& m) {
+        [](app::time currentMax, const shared_ptr<Metric>& m) {
           if (currentMax < m->getTimeEnd()) { return m->getTimeEnd(); }
           return currentMax;
         });
@@ -315,8 +315,8 @@ class Metric {
   template<size_t PATTERN_SIZE>
   static vector<rl::spState<PlotPattern<PATTERN_SIZE>>> getPatternsFromMetrics(
       const vector<shared_ptr<Metric>> metrics,
-      ANALYTIC_ENGINE::time patternTimeBegin,
-      ANALYTIC_ENGINE::time patternTimeEnd) {
+      app::time patternTimeBegin,
+      app::time patternTimeEnd) {
     vector<rl::spState<PlotPattern<PATTERN_SIZE>>> patterns;
     for (auto metric : metrics) {
       try {
