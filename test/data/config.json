@@ -1,6 +1,6 @@
 {
   "goalPattern": {
-    "metric": "summarize(invidi.webapp.localhost_localdomain.request.total_response_time.mean, \"10min\", \"avg\")",
+    "metric": "invidi.webapp.localhost_localdomain.request.total_response_time.mean",
     "timeBegin": 1474106851,
     "timeEnd":   1474153707
   },
